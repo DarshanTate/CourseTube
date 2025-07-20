@@ -16,8 +16,11 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check for session from URL fragment
     const hash = window.location.hash;
+    console.log('Current URL hash:', hash);
+    
     if (hash.includes('session_id=')) {
       const sessionId = hash.split('session_id=')[1].split('&')[0];
+      console.log('Found session_id:', sessionId);
       handleAuthCallback(sessionId);
     } else if (sessionToken) {
       // Validate existing session
