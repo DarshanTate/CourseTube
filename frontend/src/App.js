@@ -14,18 +14,35 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for session from URL fragment
+    // Check for session from URL fragment or search params
     const hash = window.location.hash;
-    console.log('Current URL hash:', hash);
+    const search = window.location.search;
     
+    console.log('Current URL hash:', hash);
+    console.log('Current URL search:', search);
+    console.log('Full URL:', window.location.href);
+    
+    let sessionId = null;
+    
+    // Try to find session_id in hash
     if (hash.includes('session_id=')) {
-      const sessionId = hash.split('session_id=')[1].split('&')[0];
-      console.log('Found session_id:', sessionId);
+      sessionId = hash.split('session_id=')[1].split('&')[0];
+      console.log('Found session_id in hash:', sessionId);
+    }
+    // Try to find session_id in search params
+    else if (search.includes('session_id=')) {
+      sessionId = search.split('session_id=')[1].split('&')[0];
+      console.log('Found session_id in search params:', sessionId);
+    }
+    
+    if (sessionId) {
+      console.log('Processing session_id:', sessionId);
       handleAuthCallback(sessionId);
     } else if (sessionToken) {
-      // Validate existing session
+      console.log('Validating existing session token');
       validateSession();
     } else {
+      console.log('No session found, setting loading to false');
       setLoading(false);
     }
   }, [sessionToken]);
