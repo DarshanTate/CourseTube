@@ -85,14 +85,19 @@ const AuthProvider = ({ children }) => {
   };
 
   const validateSession = async () => {
+    console.log('Validating session token:', sessionToken);
     try {
       const response = await axios.get(`${API}/auth/profile`, {
         headers: { 'X-Session-ID': sessionToken }
       });
       
-      if (response.data.user) {
+      console.log('Session validation response:', response.data);
+      
+      if (response.data.user && !response.data.error) {
+        console.log('Session is valid, setting user:', response.data.user);
         setUser(response.data.user);
       } else {
+        console.log('Session is invalid, logging out');
         logout();
       }
     } catch (error) {
