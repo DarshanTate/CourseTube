@@ -76,6 +76,7 @@ const AuthProvider = ({ children }) => {
 
   const login = () => {
     const redirectUrl = encodeURIComponent(window.location.origin);
+    console.log('Redirecting to auth with redirect URL:', redirectUrl);
     window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
   };
 
