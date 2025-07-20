@@ -150,6 +150,11 @@ const Header = () => {
 const Landing = () => {
   const { login } = useAuth();
 
+  const handleGetStarted = () => {
+    console.log('Get Started button clicked');
+    login();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Hero Section */}
@@ -165,7 +170,7 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={login}
+              onClick={handleGetStarted}
               className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors shadow-lg"
             >
               Get Started Free
