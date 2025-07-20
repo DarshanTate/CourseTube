@@ -31,16 +31,22 @@ const AuthProvider = ({ children }) => {
   }, [sessionToken]);
 
   const handleAuthCallback = async (sessionId) => {
+    console.log('Handling auth callback with session:', sessionId);
     try {
       const response = await axios.get(`${API}/auth/profile`, {
         headers: { 'X-Session-ID': sessionId }
       });
+      
+      console.log('Auth response:', response.data);
       
       if (response.data.user) {
         setUser(response.data.user);
         setSessionToken(response.data.session_token);
         localStorage.setItem('session_token', response.data.session_token);
         window.history.replaceState({}, document.title, window.location.pathname);
+        console.log('Successfully authenticated user:', response.data.user);
+      } else if (response.data.error) {
+        console.error('Auth error:', response.data.error);
       }
     } catch (error) {
       console.error('Auth callback error:', error);
