@@ -105,6 +105,11 @@ const useAuth = () => {
 const Header = () => {
   const { user, login, logout } = useAuth();
 
+  const handleLogin = () => {
+    console.log('Header login button clicked');
+    login();
+  };
+
   return (
     <header className="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -134,7 +139,7 @@ const Header = () => {
               </div>
             ) : (
               <button
-                onClick={login}
+                onClick={handleLogin}
                 className="bg-white text-red-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-colors"
               >
                 Login / Sign Up
