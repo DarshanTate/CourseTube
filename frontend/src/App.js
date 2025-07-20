@@ -49,24 +49,36 @@ const AuthProvider = ({ children }) => {
 
   const handleAuthCallback = async (sessionId) => {
     console.log('Handling auth callback with session:', sessionId);
+    
     try {
+      console.log('Making request to backend auth profile endpoint');
       const response = await axios.get(`${API}/auth/profile`, {
         headers: { 'X-Session-ID': sessionId }
       });
       
-      console.log('Auth response:', response.data);
+      console.log('Auth response status:', response.status);
+      console.log('Auth response data:', response.data);
       
-      if (response.data.user) {
+      if (response.data.user && !response.data.error) {
+        console.log('Successfully authenticated user:', response.data.user);
         setUser(response.data.user);
         setSessionToken(response.data.session_token);
         localStorage.setItem('session_token', response.data.session_token);
+        
+        // Clean up the URL
         window.history.replaceState({}, document.title, window.location.pathname);
-        console.log('Successfully authenticated user:', response.data.user);
+        console.log('URL cleaned up, user should see dashboard');
       } else if (response.data.error) {
-        console.error('Auth error:', response.data.error);
+        console.error('Auth error from backend:', response.data.error);
+        alert('Authentication failed: ' + response.data.error);
+      } else {
+        console.error('Unexpected auth response:', response.data);
+        alert('Authentication failed: Unexpected response format');
       }
     } catch (error) {
       console.error('Auth callback error:', error);
+      console.error('Error details:', error.response?.data);
+      alert('Authentication failed: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
