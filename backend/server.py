@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -222,7 +222,7 @@ async def get_profile(session_id: str = Header(None, alias="X-Session-ID")):
 
 # Course endpoints
 @api_router.post("/courses", response_model=Course)
-async def create_course(request: CreateCourseRequest, current_user: User = Header(..., convert_underscores=False)):
+async def create_course(request: CreateCourseRequest, current_user: User = Depends(get_current_user)):
     """Create a course from YouTube playlist"""
     try:
         playlist_id = extract_playlist_id(request.playlist_url)
@@ -252,13 +252,13 @@ async def create_course(request: CreateCourseRequest, current_user: User = Heade
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.get("/courses", response_model=List[Course])
-async def get_user_courses(current_user: User = Header(..., convert_underscores=False)):
+async def get_user_courses(current_user: User = Depends(get_current_user)):
     """Get all courses for current user"""
     courses_data = await db.courses.find({"user_id": current_user.id}).to_list(100)
     return [Course(**course) for course in courses_data]
 
 @api_router.get("/courses/{course_id}", response_model=Course)
-async def get_course(course_id: str, current_user: User = Header(..., convert_underscores=False)):
+async def get_course(course_id: str, current_user: User = Depends(get_current_user)):
     """Get specific course"""
     course_data = await db.courses.find_one({"id": course_id, "user_id": current_user.id})
     if not course_data:
@@ -273,7 +273,7 @@ async def update_progress(
     watched: bool = False,
     watch_time: int = 0,
     last_position: int = 0,
-    current_user: User = Header(..., convert_underscores=False)
+    current_user: User = Depends(get_current_user)
 ):
     """Update video progress"""
     progress_data = {
@@ -295,7 +295,7 @@ async def update_progress(
     return {"success": True}
 
 @api_router.get("/progress/{course_id}")
-async def get_course_progress(course_id: str, current_user: User = Header(..., convert_underscores=False)):
+async def get_course_progress(course_id: str, current_user: User = Depends(get_current_user)):
     """Get progress for all videos in a course"""
     progress_data = await db.progress.find({
         "user_id": current_user.id,
@@ -311,7 +311,7 @@ async def create_note(
     video_id: str,
     content: str,
     timestamp: int,
-    current_user: User = Header(..., convert_underscores=False)
+    current_user: User = Depends(get_current_user)
 ):
     """Create a note for a video"""
     note = Note(
@@ -326,7 +326,7 @@ async def create_note(
     return note
 
 @api_router.get("/notes/{video_id}", response_model=List[Note])
-async def get_video_notes(video_id: str, current_user: User = Header(..., convert_underscores=False)):
+async def get_video_notes(video_id: str, current_user: User = Depends(get_current_user)):
     """Get all notes for a video"""
     notes_data = await db.notes.find({
         "user_id": current_user.id,
@@ -336,7 +336,7 @@ async def get_video_notes(video_id: str, current_user: User = Header(..., conver
     return [Note(**note) for note in notes_data]
 
 @api_router.delete("/notes/{note_id}")
-async def delete_note(note_id: str, current_user: User = Header(..., convert_underscores=False)):
+async def delete_note(note_id: str, current_user: User = Depends(get_current_user)):
     """Delete a note"""
     result = await db.notes.delete_one({
         "id": note_id,
