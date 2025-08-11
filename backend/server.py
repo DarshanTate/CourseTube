@@ -6,12 +6,17 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional
-import uuid
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import httpx
-from passlib.context import CryptContext
 from contextlib import asynccontextmanager
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+import uuid
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -25,21 +30,12 @@ api_router = APIRouter(prefix="/api")
 
 YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY')
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-# Models
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
-    name: str
-    password: str
+    name: Optional[str] = None
     picture: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -91,16 +87,9 @@ class Session(BaseModel):
     expires_at: datetime
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-class RegisterRequest(BaseModel):
-    email: str
-    name: str
-    password: str
+class GoogleLoginRequest(BaseModel):
+    credential: str
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-# Helper functions
 def extract_playlist_id(url: str) -> str:
     if "list=" in url:
         return url.split("list=")[1].split("&")[0]
@@ -151,6 +140,21 @@ async def get_playlist_videos(playlist_id: str):
                 break
     return videos
 
+async def verify_google_token(token: str) -> Dict[str, str]:
+    try:
+        id_info = id_token.verify_oauth2_token(token, google_requests.Request(), GOOGLE_CLIENT_ID)
+        if id_info.get("iss") not in ["accounts.google.com", "https://accounts.google.com"]:
+            raise ValueError("Wrong issuer.")
+        return {
+            "id": id_info.get("sub"),
+            "email": id_info.get("email"),
+            "name": id_info.get("name"),
+            "picture": id_info.get("picture"),
+        }
+    except ValueError as e:
+        logger.error(f"Failed to verify Google token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
 async def get_current_user(session_id: str = Header(None, alias="X-Session-ID")):
     if not session_id:
         raise HTTPException(status_code=401, detail="Session ID required")
@@ -162,43 +166,50 @@ async def get_current_user(session_id: str = Header(None, alias="X-Session-ID"))
         raise HTTPException(status_code=401, detail="User not found")
     return User(**user)
 
-# Auth endpoints
-@api_router.post("/auth/register")
-async def register_user(payload: RegisterRequest):
-    existing = await db.users.find_one({"email": payload.email})
-    if existing:
-        raise HTTPException(status_code=400, detail="User already exists")
-    user = User(email=payload.email, name=payload.name, password=hash_password(payload.password))
-    await db.users.insert_one(user.dict())
-    return {"message": "User registered successfully"}
+@api_router.post("/auth/google")
+async def google_login(payload: GoogleLoginRequest):
+    user_info = await verify_google_token(payload.credential)
+    
+    db_user = await db.users.find_one({"id": user_info['id']})
+    
+    if not db_user:
+        new_user = User(
+            id=user_info['id'],
+            email=user_info['email'],
+            name=user_info.get('name'),
+            picture=user_info.get('picture'),
+        )
+        await db.users.insert_one(new_user.dict())
+        db_user = new_user.dict()
 
-@api_router.post("/auth/login")
-async def login_user(payload: LoginRequest):
-    user_data = await db.users.find_one({"email": payload.email})
-    if not user_data or not verify_password(payload.password, user_data["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    session_token = str(uuid.uuid4())
     session = Session(
-        user_id=user_data["id"],
-        session_token=str(uuid.uuid4()),
-        expires_at=datetime.utcnow() + timedelta(days=7)
+        user_id=db_user["id"],
+        session_token=session_token,
+        expires_at=datetime.utcnow() + timedelta(days=7),
     )
     await db.sessions.insert_one(session.dict())
+    
     return {
         "message": "Login successful",
-        "session_token": session.session_token,
+        "session_token": session_token,
         "user": {
-            "id": user_data["id"],
-            "email": user_data["email"],
-            "name": user_data["name"]
+            "id": db_user['id'],
+            "email": db_user['email'],
+            "name": db_user['name'],
+            "picture": db_user['picture'],
         }
     }
 
-@api_router.post("/auth/logout")
-async def logout(session_id: str = Header(None, alias="X-Session-ID")):
-    await db.sessions.delete_one({"session_token": session_id})
-    return {"message": "Logged out"}
+@api_router.get("/auth/logout")
+async def logout(current_user: User = Depends(get_current_user)):
+    await db.sessions.delete_many({"user_id": current_user.id})
+    return {"message": "Logged out successfully"}
 
-# Course endpoints
+@api_router.get("/auth/profile")
+async def get_profile(current_user: User = Depends(get_current_user)):
+    return {"user": current_user}
+
 @api_router.post("/courses", response_model=Course)
 async def create_course(request: CreateCourseRequest, current_user: User = Depends(get_current_user)):
     playlist_id = extract_playlist_id(request.playlist_url)
@@ -229,7 +240,6 @@ async def get_course(course_id: str, current_user: User = Depends(get_current_us
         raise HTTPException(status_code=404, detail="Course not found")
     return Course(**course_data)
 
-# Progress endpoints
 @api_router.post("/progress")
 async def update_progress(course_id: str, video_id: str, watched: bool = False, watch_time: int = 0, last_position: int = 0, current_user: User = Depends(get_current_user)):
     progress_data = {
@@ -253,7 +263,6 @@ async def get_course_progress(course_id: str, current_user: User = Depends(get_c
     progress_data = await db.progress.find({"user_id": current_user.id, "course_id": course_id}).to_list(1000)
     return {item["video_id"]: item for item in progress_data}
 
-# Notes endpoints
 @api_router.post("/notes", response_model=Note)
 async def create_note(course_id: str, video_id: str, content: str, timestamp: int, current_user: User = Depends(get_current_user)):
     note = Note(user_id=current_user.id, course_id=course_id, video_id=video_id, content=content, timestamp=timestamp)
@@ -280,6 +289,12 @@ async def root():
 async def test_endpoint():
     return {"message": "API is working!", "youtube_api_configured": bool(YOUTUBE_API_KEY)}
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    client.close()
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(api_router)
 
 app.add_middleware(
@@ -289,15 +304,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup code (optional)
-    yield
-    # Shutdown code
-    client.close()
-
-app = FastAPI(lifespan=lifespan)

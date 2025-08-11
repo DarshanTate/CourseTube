@@ -1,11 +1,11 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import "./App.css";
 import axios from "axios";
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Auth Context
 const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
@@ -14,74 +14,40 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for session from URL fragment or search params
-    const hash = window.location.hash;
-    const search = window.location.search;
-    
-    console.log('Current URL hash:', hash);
-    console.log('Current URL search:', search);
-    console.log('Full URL:', window.location.href);
-    
-    let sessionId = null;
-    
-    // Try to find session_id in hash
-    if (hash.includes('session_id=')) {
-      sessionId = hash.split('session_id=')[1].split('&')[0];
-      console.log('Found session_id in hash:', sessionId);
-    }
-    // Try to find session_id in search params
-    else if (search.includes('session_id=')) {
-      sessionId = search.split('session_id=')[1].split('&')[0];
-      console.log('Found session_id in search params:', sessionId);
-    }
-    
-    if (sessionId) {
-      console.log('Processing session_id:', sessionId);
-      handleAuthCallback(sessionId);
-    } else if (sessionToken) {
+    if (sessionToken) {
       console.log('Validating existing session token');
       validateSession();
     } else {
       console.log('No session found, setting loading to false');
       setLoading(false);
     }
-  }, [sessionToken]);
+  }, []);
 
-  const handleAuthCallback = async (sessionId) => {
-    console.log('Handling auth callback with session:', sessionId);
-    
+  const handleGoogleSuccess = async (credentialResponse) => {
+    console.log('Google login successful, sending credential to backend');
+    setLoading(true);
+
     try {
-      console.log('Making request to backend auth profile endpoint');
-      const response = await axios.get(`${API}/auth/profile`, {
-        headers: { 'X-Session-ID': sessionId }
-      });
-      
-      console.log('Auth response status:', response.status);
-      console.log('Auth response data:', response.data);
-      
-      if (response.data.user && !response.data.error) {
-        console.log('Successfully authenticated user:', response.data.user);
-        setUser(response.data.user);
-        setSessionToken(response.data.session_token);
-        localStorage.setItem('session_token', response.data.session_token);
-        
-        // Clean up the URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        console.log('URL cleaned up, user should see dashboard');
-      } else if (response.data.error) {
-        console.error('Auth error from backend:', response.data.error);
-        alert('Authentication failed: ' + response.data.error);
-      } else {
-        console.error('Unexpected auth response:', response.data);
-        alert('Authentication failed: Unexpected response format');
-      }
+        const response = await axios.post(`${API}/auth/google`, { credential: credentialResponse.credential });
+        const { session_token, user } = response.data;
+
+        setUser(user);
+        setSessionToken(session_token);
+        localStorage.setItem('session_token', session_token);
+
+        console.log('Successfully logged in with Google');
     } catch (error) {
-      console.error('Auth callback error:', error);
-      console.error('Error details:', error.response?.data);
-      alert('Authentication failed: ' + (error.response?.data?.detail || error.message));
+        console.error('Google login failed:', error);
+        console.error('Error details:', error.response?.data);
+        alert('Google login failed: ' + (error.response?.data?.detail || error.message));
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    console.log('Google Login Failed');
+    setLoading(false);
   };
 
   const validateSession = async () => {
@@ -93,35 +59,34 @@ const AuthProvider = ({ children }) => {
       
       console.log('Session validation response:', response.data);
       
-      if (response.data.user && !response.data.error) {
+      if (response.data.user) {
         console.log('Session is valid, setting user:', response.data.user);
         setUser(response.data.user);
-      } else {
-        console.log('Session is invalid, logging out');
-        logout();
       }
     } catch (error) {
       console.error('Session validation error:', error);
+      console.error('Error details:', error.response?.data);
       logout();
     } finally {
       setLoading(false);
     }
   };
 
-  const login = () => {
-    const redirectUrl = encodeURIComponent(window.location.origin);
-    console.log('Redirecting to auth with redirect URL:', redirectUrl);
-    window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
-  };
-
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await axios.get(`${API}/auth/logout`, {
+        headers: { 'X-Session-ID': sessionToken }
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
     setUser(null);
     setSessionToken(null);
     localStorage.removeItem('session_token');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, sessionToken }}>
+    <AuthContext.Provider value={{ user, logout, loading, sessionToken, handleGoogleSuccess, handleGoogleError }}>
       {children}
     </AuthContext.Provider>
   );
@@ -135,14 +100,8 @@ const useAuth = () => {
   return context;
 };
 
-// Components
 const Header = () => {
-  const { user, login, logout } = useAuth();
-
-  const handleLogin = () => {
-    console.log('Header login button clicked');
-    login();
-  };
+  const { user, logout, handleGoogleSuccess, handleGoogleError } = useAuth();
 
   return (
     <header className="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg">
@@ -152,7 +111,7 @@ const Header = () => {
             <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
             </svg>
-            <h1 className="text-xl font-bold">PlaylistLearn</h1>
+            <h1 className="text-xl font-bold">CourseTube</h1>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -172,12 +131,12 @@ const Header = () => {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleLogin}
-                className="bg-white text-red-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Login / Sign Up
-              </button>
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                size="large"
+                theme="filled_white"
+              />
             )}
           </div>
         </div>
@@ -187,16 +146,10 @@ const Header = () => {
 };
 
 const Landing = () => {
-  const { login } = useAuth();
-
-  const handleGetStarted = () => {
-    console.log('Get Started button clicked');
-    login();
-  };
+  const { handleGoogleSuccess, handleGoogleError } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
@@ -208,17 +161,17 @@ const Landing = () => {
             take notes with timestamps, and never lose your place again.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleGetStarted}
-              className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors shadow-lg"
-            >
-              Get Started Free
-            </button>
+            <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                size="large"
+                theme="filled_white"
+                text="signin_with"
+            />
           </div>
         </div>
       </div>
 
-      {/* Features Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid md:grid-cols-3 gap-8">
           <div className="bg-white p-6 rounded-xl shadow-lg border">
@@ -265,8 +218,10 @@ const Dashboard = () => {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    if (sessionToken) {
+      fetchCourses();
+    }
+  }, [sessionToken]);
 
   const fetchCourses = async () => {
     try {
@@ -334,7 +289,6 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Create Course Modal */}
         {showCreateForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
@@ -374,7 +328,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Courses Grid */}
         {courses.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -446,10 +399,14 @@ const App = () => {
   );
 };
 
+// ...
 const AppWithAuth = () => (
-  <AuthProvider>
-    <App />
-  </AuthProvider>
+  <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+  </GoogleOAuthProvider>
 );
+// ...
 
 export default AppWithAuth;
