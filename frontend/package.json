@@ -3,11 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@react-oauth/google": "^0.12.0",
     "axios": "^1.8.4",
     "cra-template": "1.2.0",
-    "@react-oauth/google": "^0.12.0",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "firebase": "^12.1.0",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-player": "^2.16.0",
+    "react-quill": "^2.0.0",
     "react-router-dom": "^7.5.1",
     "react-scripts": "5.0.1"
   },
@@ -38,9 +43,9 @@
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react": "7.37.4",
     "globals": "15.15.0",
+    "jwt-decode": "^4.0.0",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
-    "jwt-decode": "^4.0.0"
+    "tailwindcss": "^3.4.17"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
