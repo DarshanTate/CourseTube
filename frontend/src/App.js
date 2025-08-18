@@ -1,10 +1,9 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
 import "./App.css";
 import axios from "axios";
-import ReactPlayer from 'react-player/youtube';
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut} from "firebase/auth";
 import CourseDetails from './CourseDetails';
 
 const firebaseConfig = {
@@ -19,7 +18,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
-
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
@@ -89,31 +87,31 @@ const ThemeToggle = () => {
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
-      const savedTheme = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        setIsDark(true);
-      }
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            setIsDark(true);
+        }
     }, []);
 
     const toggleTheme = () => {
-      if (isDark) {
-        document.documentElement.setAttribute('data-theme', 'light');
-        localStorage.setItem('theme', 'light');
-        setIsDark(false);
-      } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-        setIsDark(true);
-      }
+        if (isDark) {
+            document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+            setIsDark(false);
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+            setIsDark(true);
+        }
     };
 
     return (
         <button onClick={toggleTheme} className="p-2 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors">
             {isDark ? (
                 <svg className="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 10a1 1 0 11-2 0 1 1 0 012 0zM9.293 2.293a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM3 10a1 1 0 012 0 1 1 0 01-2 0zm1.707 5.707a1 1 0 01-1.414 0l-.707-.707a1 1 0 011.414-1.414l.707.707a1 1 0 010 1.414z" clipRule="evenodd"></path>
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.951.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 10a1 1 0 11-2 0 1 1 0 012 0zM9.293 2.293a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM3 10a1 1 0 112 0 1 1 0 01-2 0zm1.707 5.707a1 1 0 01-1.414 0l-.707-.707a1 1 0 011.414-1.414l.707.707a1 1 0 010 1.414z" clipRule="evenodd"></path>
                 </svg>
             ) : (
                 <svg className="w-5 h-5 text-gray-800" fill="currentColor" viewBox="0 0 20 20">
@@ -126,14 +124,17 @@ const ThemeToggle = () => {
     );
 };
 
-const Header = () => {
+const Header = ({ courseProgress, videoProgress }) => {
     const { user, logout, signInWithGoogle } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
     return (
-        <header className="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg">
+        <header className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-lg sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-4">
-                    <div className="flex items-center space-x-2">
-                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
+                        <svg className="w-8 h-8 text-sky-500" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                         </svg>
                         <h1 className="text-xl font-bold">CourseTube</h1>
@@ -150,7 +151,7 @@ const Header = () => {
                                 </div>
                                 <button
                                     onClick={logout}
-                                    className="bg-red-800 hover:bg-red-900 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    className="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                                 >
                                     Logout
                                 </button>
@@ -158,7 +159,7 @@ const Header = () => {
                         ) : (
                             <button
                                 onClick={signInWithGoogle}
-                                className="bg-white text-red-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                                className="bg-sky-600 text-white hover:bg-sky-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                             >
                                 Sign in with Google
                             </button>
@@ -166,6 +167,16 @@ const Header = () => {
                     </div>
                 </div>
             </div>
+            {courseProgress !== null && (
+                <div className="fixed top-16 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 z-40">
+                    <div className="bg-emerald-500 h-1 transition-all duration-500" style={{ width: `${courseProgress}%` }}></div>
+                </div>
+            )}
+            {videoProgress !== null && (
+                <div className="fixed top-16 left-0 right-0 h-1 bg-gray-400 z-40">
+                    <div className="bg-sky-500 h-1" style={{ width: `${videoProgress}%` }}></div>
+                </div>
+            )}
         </header>
     );
 };
@@ -173,55 +184,23 @@ const Header = () => {
 const Landing = () => {
     const { signInWithGoogle } = useAuth();
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-black text-gray-900 dark:text-gray-100">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white flex items-center justify-center">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
                 <div className="text-center">
                     <h1 className="text-5xl md:text-6xl font-bold mb-6">
                         Transform YouTube Playlists into
-                        <span className="text-red-600 block">Structured Courses</span>
+                        <span className="text-sky-600 block">Structured Courses</span>
                     </h1>
-                    <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto">
-                        Convert any YouTube playlist into an organized learning experience. Track your progress,
-                        take notes with timestamps, and never lose your place again.
+                    <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-3xl mx-auto">
+                        Convert any YouTube playlist into an organized learning experience. Track your progress, take notes with timestamps, and never lose your place again.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <button
                             onClick={signInWithGoogle}
-                            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors"
+                            className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors"
                         >
                             Sign in with Google
                         </button>
-                    </div>
-                </div>
-            </div>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                <div className="grid md:grid-cols-3 gap-8">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border dark:border-gray-700">
-                        <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-                        <h3 className="text-xl font-semibold mb-3">Instant Import</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Simply paste any YouTube playlist URL and we'll automatically import all videos with their metadata.</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border dark:border-gray-700">
-                        <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <h3 className="text-xl font-semibold mb-3">Smart Notes</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Take notes with precise timestamps. Click any note to jump directly to that moment in the video.</p>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border dark:border-gray-700">
-                        <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                        </div>
-                        <h3 className="text-xl font-semibold mb-3">Progress Tracking</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Visual progress indicators show your completion status and help you stay motivated throughout your learning journey.</p>
                     </div>
                 </div>
             </div>
@@ -234,11 +213,11 @@ const Dashboard = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
-    const [playlistUrl, setPlaylistUrl] = useState('');
+    const [playlistUrl, setPlaylistUrl] = useState("");
     const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        if (idToken) { 
+        if (idToken) {
             fetchCourses();
         }
     }, [idToken]);
@@ -254,7 +233,8 @@ const Dashboard = () => {
                     const progressResponse = await axios.get(`${API}/progress/${course.id}`, {
                         headers: { 'Authorization': `Bearer ${idToken}` }
                     });
-                    const completedVideos = Object.values(progressResponse.data).filter(p => p.watched).length;
+                    const progressData = progressResponse.data;
+                    const completedVideos = Object.values(progressData).filter(p => p.watched).length;
                     return {
                         ...course,
                         progress: (completedVideos / course.videos.length) * 100 || 0,
@@ -281,7 +261,7 @@ const Dashboard = () => {
             });
             const newCourse = { ...response.data, progress: 0 };
             setCourses(prev => [newCourse, ...prev]);
-            setPlaylistUrl('');
+            setPlaylistUrl("");
             setShowCreateForm(false);
         } catch (error) {
             console.error('Error creating course:', error);
@@ -297,26 +277,25 @@ const Dashboard = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading your courses...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
+                    <p className="text-slate-600 dark:text-slate-400">Loading your courses...</p>
                 </div>
             </div>
         );
     }
-    
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-3xl font-bold">My Courses</h1>
-                        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your YouTube playlist courses</p>
+                        <p className="text-slate-600 dark:text-slate-400 mt-2">Manage your YouTube playlist courses</p>
                     </div>
                     <button
                         onClick={() => setShowCreateForm(true)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2 transition-colors"
+                        className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2 transition-colors shadow-lg"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -324,14 +303,13 @@ const Dashboard = () => {
                         <span>Import Playlist</span>
                     </button>
                 </div>
-    
                 {showCreateForm && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 text-gray-900 dark:text-gray-100">
+                        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-md mx-4 text-slate-900 dark:text-white shadow-xl">
                             <h2 className="text-xl font-bold mb-4">Import YouTube Playlist</h2>
                             <form onSubmit={createCourse}>
                                 <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                         YouTube Playlist URL
                                     </label>
                                     <input
@@ -339,22 +317,22 @@ const Dashboard = () => {
                                         value={playlistUrl}
                                         onChange={(e) => setPlaylistUrl(e.target.value)}
                                         placeholder="https://youtube.com/playlist?list=..."
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
                                         required
                                     />
                                 </div>
                                 <div className="flex space-x-3">
                                     <button
                                         type="button"
-                                        onClick={() => {setShowCreateForm(false); setPlaylistUrl('');}}
-                                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                        onClick={() => { setShowCreateForm(false); setPlaylistUrl(""); }}
+                                        className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={creating}
-                                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                        className="flex-1 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors"
                                     >
                                         {creating ? 'Importing...' : 'Import'}
                                     </button>
@@ -363,19 +341,18 @@ const Dashboard = () => {
                         </div>
                     </div>
                 )}
-    
                 {courses.length === 0 ? (
-                    <div className="text-center py-16 text-gray-900 dark:text-gray-100">
-                        <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-8 h-8 text-gray-400 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="text-center py-16 text-slate-900 dark:text-white">
+                        <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1h4zM7 8v10a2 2 0 002 2h6a2 2 0 002-2V8H7z" />
                             </svg>
                         </div>
                         <h3 className="text-lg font-medium mb-2">No courses yet</h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">Import your first YouTube playlist to get started</p>
+                        <p className="text-slate-600 dark:text-slate-400 mb-4">Import your first YouTube playlist to get started</p>
                         <button
                             onClick={() => setShowCreateForm(true)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                            className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg"
                         >
                             Import Playlist
                         </button>
@@ -395,10 +372,6 @@ const Dashboard = () => {
 const CourseCard = ({ course, idToken, onDelete }) => {
     const navigate = useNavigate();
 
-    const handleStartLearning = () => {
-        navigate(`/courses/${course.id}`);
-    };
-
     const handleDelete = async (e) => {
         e.stopPropagation();
         if (window.confirm('Are you sure you want to delete this course?')) {
@@ -414,60 +387,77 @@ const CourseCard = ({ course, idToken, onDelete }) => {
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border dark:border-gray-700 hover:shadow-xl transition-shadow relative">
-            <div className="aspect-video bg-gray-200 rounded-t-xl overflow-hidden">
-                <img
-                    src={course.thumbnail_url}
-                    alt={course.title}
-                    className="w-full h-full object-cover"
-                />
-            </div>
-            <div className="p-6">
-                <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-gray-900 dark:text-gray-100">{course.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-3">{course.description}</p>
-                <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">{course.videos.length} videos</span>
-                    <button
-                        onClick={handleStartLearning}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                    >
-                        Start Learning
-                    </button>
+        <Link to={`/courses/${course.id}`} className="block">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-shadow relative cursor-pointer">
+                <div className="aspect-video bg-slate-200 rounded-t-xl overflow-hidden">
+                    <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
                 </div>
-                {/* Progress Bar */}
-                <div className="mt-4">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                        <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${course.progress}%` }}></div>
+                <div className="p-6">
+                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 text-slate-900 dark:text-white">{course.title}</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm mb-4 line-clamp-3">{course.description}</p>
+                    {/* Progress Bar */}
+                    <div className="mt-4">
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                            <div className="bg-emerald-500 h-2.5 rounded-full" style={{ width: `${course.progress}%` }}></div>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{Math.floor(course.progress)}% Complete</p>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{Math.floor(course.progress)}% Complete</p>
                 </div>
+                <button
+                    onClick={handleDelete}
+                    className="absolute top-2 right-2 p-1 text-slate-500 dark:text-slate-300 bg-white dark:bg-slate-800 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    aria-label="Delete course"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-1 12H6L5 7m14 0h-4m-4 0H5m4 0V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                    </svg>
+                </button>
             </div>
-            <button
-                onClick={handleDelete}
-                className="absolute top-2 right-2 p-1 text-red-500 dark:text-red-300 bg-white dark:bg-gray-800 rounded-full hover:bg-red-100 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Delete course"
-            >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-1 12H6L5 7m14 0h-4m-4 0H5m4 0V4a1 1 0 011-1h4a1 1 0 011 1v3" />
-                </svg>
-            </button>
-        </div>
+        </Link>
     );
 };
 
 const App = () => {
     const { user, loading } = useAuth();
+    const [courseProgress, setCourseProgress] = useState(null);
+    const [videoProgress, setVideoProgress] = useState(0);
+    const location = useLocation();
+
+    useEffect(() => {
+        // Reset progress when navigating away from a course
+        if (!location.pathname.startsWith('/courses/')) {
+            setCourseProgress(null);
+            setVideoProgress(0);
+        }
+    }, [location]);
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
+                    <p className="text-slate-600 dark:text-slate-400">Loading your courses...</p>
+                </div>
             </div>
         );
     }
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <Header />
-            {user ? <Dashboard /> : <Landing />}
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">
+            <Header courseProgress={courseProgress} videoProgress={videoProgress} />
+            <Routes>
+                <Route path="/" element={user ? <Dashboard /> : <Landing />} />
+                <Route
+                    path="/courses/:courseId"
+                    element={
+                        user ?
+                        <CourseDetails
+                            setCourseProgress={setCourseProgress}
+                            setVideoProgress={setVideoProgress}
+                        /> :
+                        <Landing />
+                    }
+                />
+            </Routes>
         </div>
     );
 };
@@ -475,34 +465,7 @@ const App = () => {
 export default function AppWithAuth() {
     return (
         <AuthProvider>
-            <AppRoutes />
+            <App />
         </AuthProvider>
     );
 }
-
-const AppRoutes = () => {
-    const { user, loading } = useAuth();
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-            </div>
-        );
-    }
-    return (
-        <Routes>
-            <Route path="/" element={<AppWithoutRoutes />} />
-            <Route path="/courses/:courseId" element={user ? <CourseDetails /> : <AppWithoutRoutes />} />
-        </Routes>
-    );
-};
-
-const AppWithoutRoutes = () => {
-    const { user } = useAuth();
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <Header />
-            {user ? <Dashboard /> : <Landing />}
-        </div>
-    );
-};
